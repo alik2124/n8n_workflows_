@@ -142,4 +142,3 @@ Contributions are welcome. Feel free to fork the repository, submit issues, and 
 This project is licensed under the MIT License.
 
 
-If you would like, I can format this into a downloadable `README.md` file for you. Would you like that?
