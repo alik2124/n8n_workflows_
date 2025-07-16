@@ -1,0 +1,485 @@
+{
+  "name": "updated hybrid memory",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "insert",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        -1040,
+        -240
+      ],
+      "id": "4622147f-f48f-4420-b7c5-0b0c390f83a3",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "8FHcYcY0juWJvrcY",
+          "name": "hybrid memory"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -960,
+        40
+      ],
+      "id": "88285537-a3e6-43c4-b4eb-6cb77f99d50d",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        240
+      ],
+      "id": "74a8a7de-d8ec-4908-87c0-43e88b2f5ab8",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -120,
+        -200
+      ],
+      "id": "bfa9256d-10a2-42ff-92e8-372a1a8cf444",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        120,
+        20
+      ],
+      "id": "1b32ead6-f170-4db1-8da6-5e67a72e447f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "fetch the asked data which has been feeded to you",
+        "topK": 1000000,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        840,
+        60
+      ],
+      "id": "6524706a-1739-4614-af97-2e847c0d1229",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "8FHcYcY0juWJvrcY",
+          "name": "hybrid memory"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are an AI SQL agent that creates SQL queries based on user input. You are working with a PostgreSQL table named 'n8n_chat_histories', which has the following columns:\n- id (primary key, auto-increment)\n- session_id (text): identifies a user's session\n- messages (text): stores individual chat messages\n\nYour goal is to generate SQL queries that retrieve relevant past messages from this table.\nRules:\n\n1. If the input is not related to any previous data or past messages, return:\n{\n\"query\": \"SELECT 'No memory lookup needed. AS messages;\"\n}\n2. If the user asks something like \"What did I say during my last session?\" or \"Remind me of what I talked about\" or asked any thing to tell them about anything you chat in past now you have to recall that memory, return a query like:\n\n{\n\"query\": \"SELECT COALESCE((SELECT STRING_AGG (messages, ', ') FROM n8n_chat_histories WHERE session_id = '{{ $json.sessionId}}' LIMIT 100), 'No memory found.') AS memory;\"\n}\n\nyou can make your own query also it is just an example"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        20
+      ],
+      "id": "807ea68f-7eb8-4860-bcb5-38518680dc73",
+      "name": "AI SQL Agent"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=You are a general-purpose AI assistant. Your goal is to respond helpfully and conversationally using:\n\nThe user's current message\n\nRelevant memory retrieved from a vector store\n\nPast messages retrieved from Postgres via SQL\n\nExternal tools provided to you\n\nYour Responsibilities:\nRead the user’s current message carefully.\n\nRetrieve and use memory when it's relevant to the user's topic.\n\nUse Postgres (SQL tool) when the user asks about past messages, memory, logs, or data history.\n\nUse the Vector Store tool to:\n\nAnswer questions from previous conversations semantically\n\nFetch contextual memory using embeddings\n\nWhen tools are needed, call them confidently — the user expects this.\n\nGuidance:\nBe helpful, polite, and clear.\n\nThink step-by-step: decide when to act using memory or tools.\n\nIf a tool is not needed, respond naturally with your own reasoning.\n\nIf you can't help directly, suggest the best tool and call it.\nuse memory \n\nmostly use the **Answer questions with a vector store** to call back the previous memory then it will find it in vector database.  \n**Avoid hallucinating or making assumptions use your own memory instead of that use vectore database**.\n\ndo not give any information which i haven't provide you\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        620,
+        -200
+      ],
+      "id": "c42380d1-8cd9-42dd-8b20-b1ea35d66950",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -500,
+        -220
+      ],
+      "id": "8683c28d-0706-499f-99ac-838cf0ea4b1f",
+      "name": "chat",
+      "webhookId": "afee1344-a156-4a7b-b9b0-a79e3246db3d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get full raw input from previous node\nconst input = $input.first().json;\n\nlet query = null;\n\ntry {\n  // If input is already a parsed object with a query field\n  if (typeof input.query === 'string' && input.query.trim() !== '') {\n    query = input.query;\n  }\n\n  // If input contains a stringified JSON\n  else if (typeof input === 'string') {\n    const parsed = JSON.parse(input);\n    if (parsed.query && typeof parsed.query === 'string') {\n      query = parsed.query;\n    }\n  }\n\n  // Optional: fallback if query still not found\n  if (!query) {\n    throw new Error('Query not found or empty');\n  }\n\n} catch (err) {\n  // Log actual error in case needed for debugging\n  console.error('Invalid or missing query from AI:', err.message);\n\n  // Return error message as SQL so flow continues safely\n  query = \"SELECT 'AI query invalid or missing.' AS message;\";\n}\n\nreturn [\n  {\n    json: {\n      query\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        20
+      ],
+      "id": "7255b99f-8a2b-47de-908b-d7cc44866ff4",
+      "name": "function"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  '{{$('chat').item.json.sessionId}}' AS session_being_queried,\n  (\n    SELECT STRING_AGG(message::text, ', ')\n    FROM n8n_chat_histories\n    WHERE session_id = '{{ $('chat').item.json.sessionId }}'\n  ) AS memory;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -120,
+        20
+      ],
+      "id": "3e18fad4-ffca-4231-a739-ab3baba5c007",
+      "name": "SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "8FHcYcY0juWJvrcY",
+          "name": "hybrid memory"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\nconst sessionData = inputItems[0].json;\nconst memoryData = inputItems[1].json?.data?.[0]?.memory || \"No memory\";\n\nreturn [\n  {\n    json: {\n      id: 1,\n      text: sessionData.chatInput || \"\",\n      metadata: {\n        sessionId: sessionData.sessionId,\n        action: sessionData.action,\n        memory: memoryData\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        -200
+      ],
+      "id": "92deb24b-c57a-4b4a-820b-8c5d97db6ece",
+      "name": "output parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        40
+      ],
+      "id": "b13532df-5582-4373-8c91-ffa9053831fb",
+      "name": "AI model",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        240
+      ],
+      "id": "9994e135-ff5f-436a-b1a2-e41bb14c56df",
+      "name": "SQL AI Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1160,
+        40
+      ],
+      "id": "1107bd4e-3557-4de0-ac92-949da5918d38",
+      "name": "Embeddings",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        580,
+        400
+      ],
+      "id": "37bf13e0-4a58-489d-a330-68c4824759ca",
+      "name": "Embeddings1",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.metadata.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        660,
+        20
+      ],
+      "id": "127dfdb0-cf32-437e-809b-c1b5ef20fb66",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "output parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store1": {
+      "ai_vectorStore": [
+        []
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI SQL Agent": {
+      "main": [
+        [
+          {
+            "node": "function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chat": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI SQL Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "function": {
+      "main": [
+        [
+          {
+            "node": "SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL query": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "output parser": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI SQL Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "15790477-ac2a-466c-9a2a-8085758c3c3d",
+  "meta": {
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "c4HM3NW0GwN6yoeI",
+  "tags": []
+}
