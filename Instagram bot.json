@@ -1,0 +1,208 @@
+{
+  "name": "Instagram bot",
+  "nodes": [
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "path": "d8d6a3d3-54da-4c28-9760-3bbbb7802aee",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        -100
+      ],
+      "id": "07341974-c90e-415b-956b-f684504b5107",
+      "name": "Webhook",
+      "webhookId": "d8d6a3d3-54da-4c28-9760-3bbbb7802aee"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a7f69f4f-5633-47a5-a62b-669dbbc58969",
+              "leftValue": "={{ $json.query['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "d7cf88c7-4b9f-4cc7-9eeb-12a695ef2786",
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "testtest",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -340,
+        -180
+      ],
+      "id": "f11cd679-857b-4e27-9be7-f64aaec9f860",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        140,
+        -200
+      ],
+      "id": "9d39bb19-7847-421f-b737-857f02e52021",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -360,
+        120
+      ],
+      "id": "542c69a9-e815-4541-9e7e-d1db865eabaa",
+      "name": "Wait",
+      "webhookId": "2f74e553-bd8d-45fb-b4d2-ba7c78bd96a4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v23.0/{{ $('Wait').item.json.body.entry[0].messaging[0].recipient.id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer IGAAKReXcESPxBZAE1BbWVTZA214VlZA5QWZAlUDMwN01jZA2NxSkVXVDVvcV9NY1lEN1lacURoR2NBU3l5ZAnlFNm53QzM3XzgyTzdhTTdyT19YNjhlNDd5ZAHNKdXFrMGlpWHByaGd1N1JDanpnQTdZATkdNa0tvQ09pTlVBcDd5THhmMAZDZD"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"recipient\": {\n    \"id\": \"{{ $('Wait').item.json.body.entry[0].messaging[0].sender.id }}\"\n  },\n  \"message\": {\n    \"text\": \"{{ $json.reply }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        140,
+        120
+      ],
+      "id": "35564e72-84cd-485d-9235-74ced9af211c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "51c381d7-a8fc-4b61-847b-70582c98cf93",
+              "name": "reply",
+              "value": "YO",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -100,
+        120
+      ],
+      "id": "c20830e1-50c3-4d60-997c-c00a8c1a033f",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2a1f7cc8-f06c-40fb-836a-52a274ce5f06",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "zyBEJWnKXHGQXEYp",
+  "tags": []
+}
