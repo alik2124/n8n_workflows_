@@ -1,0 +1,224 @@
+{
+  "name": "Vapi Call Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "0caae136-6a1b-4c18-b05a-2921163a9845",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -4608,
+        -64
+      ],
+      "id": "f6ea470b-efe5-42ed-87c1-944ac832d89d",
+      "name": "Webhook",
+      "webhookId": "0caae136-6a1b-4c18-b05a-2921163a9845"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n    \"results\": [\n        {\n            \"toolCallId\": \"{{ $('Webhook').item.json.body.message.toolCalls[0].id }}\",\n            \"result\": \"{{ $json.output }}\"\n        }\n    ]\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3056,
+        -16
+      ],
+      "id": "58075b96-f401-4c50-a42b-9950e0e541d5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-6226bc469273415a8f8bc0c4041b4287"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"url\": \"https://automateforme.xyz/\",\n  \"formats\": [\n    \"markdown\"\n  ],\n  \"onlyMainContent\": true,\n  \"parsePDF\": true,\n  \"maxAge\": 14400000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4288,
+        192
+      ],
+      "id": "3e027d8c-39f4-4a59-8d2e-4b04e6dc4de5",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.query }}",
+        "options": {
+          "systemMessage": "=You are Ali, an AI voice assistant representing automateforme.xyz, a Dubai-based AI automation agency.\n\nYou are provided with scraped content from the automateforme.xyz website. Use this information to answer the user's latest question accurately and helpfully.\n\nOnly use the scraped content for your answer — do not hallucinate or assume facts. If the scraped content does not contain a clear answer, say politely that the requested information was not found.\n\nYour tone should be:\n- Friendly and confident\n- Clear and conversational (use contractions and natural phrasing)\n- Helpful, not pushy\n\nDo not repeat the question or scraped text back unless necessary.\n\nBegin your answer directly and keep it concise but informative.\n\n---\n\n### Scraped Website Content:\n{{ $json.humanReadableContent }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -3408,
+        -16
+      ],
+      "id": "9ce7cbfc-93fd-477d-b897-2c860c9f8086",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -3408,
+        192
+      ],
+      "id": "190c3c4d-7d54-4849-8ee4-ec56863ff3c3",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Safely extract markdown content from previous node (e.g., HTTP Response)\nconst rawMarkdown = $json?.data?.markdown || 'No content available.';\n\n// Step 2: Clean and prepare the markdown for human-readable use\nconst cleanedContent = rawMarkdown\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 25)\n  .filter(line => !/^\\W*$/.test(line)) // remove lines with only symbols\n  .slice(0, 40)\n  .join('\\n');\n\n// Step 3: Return result in proper n8n format\nreturn [\n  {\n    json: {\n      humanReadableContent: cleanedContent\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4048,
+        192
+      ],
+      "id": "59719e99-6c24-4039-a5fd-b8394955dcd5",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -3728,
+        -16
+      ],
+      "id": "bd7c6ea1-1eaf-4b04-aa3a-02abafd155ba",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cdcbd1e5-8988-4812-8384-3cd491eb192c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "tVajqYWY05ri5sox",
+  "tags": []
+}
