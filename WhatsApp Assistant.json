@@ -1,0 +1,978 @@
+{
+  "name": "WhatsApp Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        144
+      ],
+      "id": "05386529-9026-4051-97ac-7c4aa163e706",
+      "name": "WhatsApp Trigger",
+      "webhookId": "c70b9a8a-6cc4-4420-aab7-3dd8a52f8d0b",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "tg0AEoebArP4axD2",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        144,
+        608
+      ],
+      "id": "63a2cae3-b2f3-4a95-9ee6-55216ba5b677",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        352,
+        -80
+      ],
+      "id": "9fd1f95f-13ef-427b-bd26-7fbedb0d4763",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e71fe94d-03c4-42e4-9785-cf58fc19df14",
+              "leftValue": "={{ $('WhatsApp Trigger').item.json.messages[0].audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        320
+      ],
+      "id": "a7c14e45-f738-4cb3-9c97-33b23a26d87c",
+      "name": "If",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=you are a helpful assistant called khan.\nrespond in a natural and friendly tone\n\nthe current date and time is {{ $now }}. Always take date and time from here.\n\ntools:\nyou have 2 tools of google sheet which has 4 columns task, date, time\n\n\nif the user ask to set a reminder for the sepcific task, date and time then use your add reminder tool to append the task, date and time and status will remain pending. if the hours is in single digit like 6:28 or 4:30 so always written it in the sheet as 06:28 always put 0 first if the hours is in single digit\n\nif the user ask to show the reminders then only show those which has status pending from get reminder tool\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        320,
+        320
+      ],
+      "id": "6b8fe339-9a77-4d87-b900-444ff953c73e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1152,
+        192
+      ],
+      "id": "e57f0499-1a96-4a9e-b891-8d1b3239f975",
+      "name": "Generate audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "IWZ5WKMJiV5068kS",
+          "name": "ali's open ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "723488607511111",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        192
+      ],
+      "id": "1f32f39b-73a3-421f-971f-11aac6dc698f",
+      "name": "Send message1",
+      "webhookId": "c041bd15-b303-4c8e-acaa-2ba33afac683",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4YS6eQxjwYrJzkP7",
+          "name": "WhatsApp account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  if (item.binary) {\n    const binaryPropertyNames = Object.keys(item.binary);\n\n    for (const propName of binaryPropertyNames) {\n      if (item.binary[propName].mimeType === 'audio/mp3') {\n        item.binary[propName].mimeType = 'audio/mpeg';\n      }\n    }\n  }\n}\n\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        192
+      ],
+      "id": "3b992c2c-4d99-4f6c-a0de-3e0aa5f1fe48",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "cf1430f6-07bd-4540-b93b-98dbacd3bdfb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6fe84199-84dc-47ee-b242-c0c9824e0394",
+                    "leftValue": "={{ $json.messages[0].text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -400,
+        144
+      ],
+      "id": "32a46f8a-0cfc-4048-954c-a70aa7f73173",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $('WhatsApp Trigger').item.json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -80
+      ],
+      "id": "e15a2e4c-102b-4635-8ae6-dcc8b652bedd",
+      "name": "Download audio",
+      "webhookId": "6b3c7617-4a04-45d2-9cc6-247854242cb0",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4YS6eQxjwYrJzkP7",
+          "name": "WhatsApp account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        144,
+        -80
+      ],
+      "id": "f2282a54-b683-4011-bdce-f2d8a991ba5e",
+      "name": "Audio URL",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "3uRhZsRC82kHB17t",
+          "name": "WhatsApp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd90254c-6bcc-4e6d-a5e3-adc550551e72",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        -80
+      ],
+      "id": "91e9c146-fe01-4ed9-9fce-521f2005ccda",
+      "name": "Audio to text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2668470-e5ec-4106-a236-cda60c6d7e85",
+              "name": "text",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -48,
+        320
+      ],
+      "id": "6e5a2485-fb31-4e65-a680-c991a4069eb4",
+      "name": "Text"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        688
+      ],
+      "id": "d6109190-84c6-48ab-891f-3a1ac9582cf8",
+      "name": "Simple Memory",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        512,
+        912
+      ],
+      "id": "1ba4c102-2d27-47b8-a158-8d30fe36a573",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ",
+          "mode": "list",
+          "cachedResultName": "reminders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "time",
+              "lookupValue": "={{ $json.reminderTime }}"
+            },
+            {
+              "lookupColumn": "date",
+              "lookupValue": "={{ $json.reminderDate }}"
+            },
+            {
+              "lookupColumn": "status",
+              "lookupValue": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        928,
+        912
+      ],
+      "id": "c8a2570f-9ca6-4647-8946-284ce449cb09",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rep7JQ6x8OdVMOUS",
+          "name": "ali's Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "723488607511111",
+        "recipientPhoneNumber": "+923032931470",
+        "textBody": "={{ $json.reminder }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        912
+      ],
+      "id": "e93a68f0-de08-44cb-bde7-6bf1c5c6cc56",
+      "name": "Send message2",
+      "webhookId": "4936ea0b-2fe5-4526-9fb6-0e049f93f40a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4YS6eQxjwYrJzkP7",
+          "name": "WhatsApp account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fc58f62f-8e29-451d-bc2e-9be2e9ccf8d7",
+              "name": "reminder",
+              "value": "=Hi! This is your reminder to {{ $json.task }} at {{ $json.time }} on {{ $json.date }} .",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        912
+      ],
+      "id": "842df549-25cb-4d57-85e0-073c0701ad41",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "723488607511111",
+        "recipientPhoneNumber": "+923032931470",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        480
+      ],
+      "id": "10fa3e1b-2acc-4eeb-97b7-3b08afd8d62b",
+      "name": "Send message",
+      "webhookId": "27d535f7-29a3-4de8-aee2-f3f1b272b995",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4YS6eQxjwYrJzkP7",
+          "name": "WhatsApp account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ",
+          "mode": "list",
+          "cachedResultName": "reminders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "task": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('task', ``, 'string') }}",
+            "date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('date', ``, 'string') }}",
+            "time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('time', ``, 'string') }}",
+            "status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('status', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "task",
+              "displayName": "task",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        688,
+        608
+      ],
+      "id": "32b59e73-6526-4e21-a401-f72eb47d9963",
+      "name": "Add reminder",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rep7JQ6x8OdVMOUS",
+          "name": "ali's Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ",
+          "mode": "list",
+          "cachedResultName": "reminders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        320,
+        608
+      ],
+      "id": "24c02643-c3c6-400b-a270-10c012648999",
+      "name": "Get reminder",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "MhQfdv5OWVJnBA2m",
+          "name": "ali's google sheet"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ",
+          "mode": "list",
+          "cachedResultName": "reminders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ZExalNAt5SsVoiUjiP0Q2PYL0tUOWQQKx8_VHd5R7zQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "sent",
+            "row_number": "={{ $('Get row(s) in sheet').item.json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "task",
+              "displayName": "task",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1648,
+        912
+      ],
+      "id": "f2c1976b-8e05-4764-8df0-82d1a9882d02",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rep7JQ6x8OdVMOUS",
+          "name": "ali's Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the values from Schedule node\nconst year = $json[\"Year\"];          // e.g., \"2025\"\nconst monthName = $json[\"Month\"];    // e.g., \"July\"\nconst day = $json[\"Day of month\"];   // e.g., \"23\"\nconst hour = $json[\"Hour\"];          // e.g., \"09\"\nconst minute = $json[\"Minute\"];      // e.g., \"53\"\n\n// Convert month name to month number\nconst months = {\n  January: \"01\", February: \"02\", March: \"03\", April: \"04\",\n  May: \"05\", June: \"06\", July: \"07\", August: \"08\",\n  September: \"09\", October: \"10\", November: \"11\", December: \"12\"\n};\n\nconst monthNumber = months[monthName];\n\n// Construct date and time\nconst reminderDate = `${year}-${monthNumber}-${day.padStart(2, '0')}`; // e.g., \"2025-07-23\"\nconst reminderTime = `${parseInt(hour, 10)}:${minute.padStart(2, '0')}`; // e.g., \"9:53\"\n\nreturn [\n  {\n    json: {\n      reminderDate,\n      reminderTime\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        912
+      ],
+      "id": "4aef7134-d001-43f9-a74d-0fdfe34768ed",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Audio to text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Generate audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate audio": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Download audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download audio": {
+      "main": [
+        [
+          {
+            "node": "Audio URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio URL": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio to text": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message2": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Send message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add reminder": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get reminder": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1562967c-83b0-42eb-a91b-5defd4070384",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "92ATiAaceLUuHCQm",
+  "tags": []
+}
