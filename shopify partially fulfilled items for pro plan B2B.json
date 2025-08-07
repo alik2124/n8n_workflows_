@@ -1,0 +1,659 @@
+{
+  "name": "shopify partially fulfilled items for pro plan B2B",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const draftOrderId = $input.first().json.data.draftOrderCreateFromOrder.draftOrder.id;\n\nconst metafieldEdges =\n  $('Loop Over Items').first().json[\"data.orders.edges\"].node.metafields.edges || [];\n\nconst metafieldStrings = metafieldEdges.map((edge) => {\n  return `{\n    ownerId: \"${draftOrderId}\",\n    namespace: \"custom\",\n    key: \"${edge.node.key}\",\n    type: \"single_line_text_field\",\n    value: \"${edge.node.value}\"\n  }`;\n}).join(\",\\n\");\n\nconst query = `\nmutation {\n  metafieldsSet(metafields: [${metafieldStrings}]) {\n    metafields {\n      key\n      value\n      namespace\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}\n`;\n\nreturn [\n  {\n    json: {\n      query\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -608
+      ],
+      "id": "087c13bf-4e19-4335-bcb8-408c563e9032",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4224,
+        -608
+      ],
+      "id": "45970468-2689-41d1-a8b9-6895fdd1cc0b",
+      "name": "combining all items to be removed1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "=query {\n      orders(query: \"name:#2345\", first: 10) {\n    edges {\n      node {\n        id\n        name\n        poNumber\n        email\n        phone\n        note\n        tags\n        poNumber\n        displayFinancialStatus\n        customer {\n          id\n          email\n          firstName\n          lastName\n        }\n        shippingLine{\n          id\n          title\n          carrierIdentifier\n          code\n          shippingRateHandle\n          source\n          price\n        }\n        shippingAddress {\n          address1\n          address2\n          city\n          province\n          provinceCode\n          zip\n          country\n          countryCodeV2\n          firstName\n          lastName\n          company\n          phone\n        }\n        billingAddress {\n          address1\n          address2\n          city\n          province\n          provinceCode\n          zip\n          country\n          countryCodeV2\n          firstName\n          lastName\n          company\n          phone\n        }\n         metafields(first: 250, namespace: \"custom\") {\n          edges {\n            node {\n              key\n              value\n            }\n          }\n        }\n        lineItems(first: 250) {\n          edges {\n            node {\n              id\n              title\n              quantity\n              fulfillableQuantity\n              variant {\n                id\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        -608
+      ],
+      "id": "74306689-4ac0-45af-bdb2-9c6fcf42ef38",
+      "name": "Fetch Partially Fulfilled Orders"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.orders.edges",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -608
+      ],
+      "id": "60324d67-460f-44ee-8641-4a05ab4ceb49",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1264,
+        -608
+      ],
+      "id": "3df3f697-c4e3-467d-accd-85992d811d81",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/unstable/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"mutation DraftOrderCreateFromOrder($orderId: ID!) { draftOrderCreateFromOrder(orderId: $orderId) { draftOrder { id } userErrors { field message } } }\",\n  \"variables\": {\n    \"orderId\": \"{{ $json['data.orders.edges'].node.id }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -608
+      ],
+      "id": "afdc075c-de13-4434-8745-1ee6e8bd8f85",
+      "name": "Draft"
+    },
+    {
+      "parameters": {
+        "jsCode": "const orderNode = $(\"Loop Over Items\").first().json[\"data.orders.edges\"].node;\n\n// Extract fields\nconst poNumber = orderNode.poNumber || null;\n\nconst tags = [\n  ...(orderNode.tags || []),\n  `Backorder-#${orderNode.name.replace(\"#\", \"\")}`,\n];\n\nconst lineItems = (orderNode.lineItems.edges || [])\n  .filter((edge) => edge.node.fulfillableQuantity > 0)\n  .map((edge) => ({\n    variantId: edge.node.variant.id,\n    quantity: edge.node.fulfillableQuantity,\n  }));\n\nconst shippingLineRaw = orderNode.shippingLine || null;\nconst shippingLine = shippingLineRaw &&\n  (shippingLineRaw.title || shippingLineRaw.price || shippingLineRaw.shippingRateHandle)\n  ? {\n      title: shippingLineRaw.title || \"\",\n      price: shippingLineRaw.price || \"0.00\",\n      shippingRateHandle: shippingLineRaw.shippingRateHandle || \"\",\n    }\n  : null;\n\n// ✅ Build dynamic input object\nconst inputObject = {};\n\nif (poNumber) inputObject[\"poNumber\"] = poNumber;\nif (tags.length > 0) inputObject[\"tags\"] = tags;\nif (lineItems.length > 0) inputObject[\"lineItems\"] = lineItems;\nif (shippingLine) inputObject[\"shippingLine\"] = shippingLine;\n\n// ✅ Get ownerId from previous node\nconst ownerId = $('Draft').first().json.data.draftOrderCreateFromOrder.draftOrder.id;\n\nlet gqlQuery = `{\n  \"query\": \"mutation updateDraftOrderMetafields($input: DraftOrderInput!, $ownerId: ID!) { draftOrderUpdate(input: $input, id: $ownerId) { draftOrder { id metafields(first: 3) { edges { node { id namespace key value } } } } userErrors { message field } } }\",\n  \"variables\": {\n    \"input\": ${JSON.stringify(inputObject)},\n    \"ownerId\": \"${ownerId}\"\n  }\n}\n`;\n\n// Return final JSON object\nreturn [\n  {\n    json: {\n      query: gqlQuery,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        -608
+      ],
+      "id": "8e651bde-5c5b-40df-b65c-be4b5f0775f3",
+      "name": "metafeilds query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ✅ Get draftOrderId from previous step\nconst draftOrderId = $input.first().json.data.draftOrderUpdate.draftOrder.id;\n\n// ✅ Get financial status from the original order\nconst originalOrder = $('Loop Over Items').first().json[\"data.orders.edges\"].node;\nconst financialStatus = originalOrder.displayFinancialStatus;\n\n// ✅ Decide if paymentPending should be true or false\n// → If original order is fully paid, we set false (mark draft order as paid)\n// → Otherwise, leave it as true (pending)\nconst paymentPending = (financialStatus === \"PAID\") ? false : true;\n\nconst draftOrderCompleteMutation = `\nmutation {\n  draftOrderComplete(id: \"${draftOrderId}\", paymentPending: ${paymentPending}) {\n    draftOrder {\n      id\n      order {\n        id\n        name\n      }\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}`;\n\nreturn [{\n  json: {\n    query: draftOrderCompleteMutation\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        -608
+      ],
+      "id": "1fe5019f-ba50-4df1-ba61-6d44c17669c8",
+      "name": "making query for order complete"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        -608
+      ],
+      "id": "b5a1b3fa-f050-49ba-ad56-b53db8387b75",
+      "name": "Order complete"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "=mutation {\n  orderEditBegin(id: \"{{ $('Loop Over Items').item.json['data.orders.edges'].node.id }}\") {\n    calculatedOrder {\n      id\n      lineItems(first: 20) {\n        edges {\n          node {\n            id\n            title\n            quantity\n          }\n        }\n      }\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3200,
+        -608
+      ],
+      "id": "4c7d9227-b1ef-4d37-8776-2bf445ea70ba",
+      "name": "Begin Edit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract calculated and original orders\nconst calculatedOrder = $input.first().json.data.orderEditBegin.calculatedOrder;\nconst originalOrder = $('Loop Over Items').first().json[\"data.orders.edges\"].node;\n\nconst groupedItems = [];\n\nfor (const edge of originalOrder.lineItems.edges) {\n  const lineItem = edge.node;\n\n  // Only process items that still need fulfillment\n  if (lineItem.fulfillableQuantity > 0) {\n    // Extract the numeric part of the line item ID for matching\n    const lineItemIdSuffix = lineItem.id.split(\"/\").pop();\n\n    // Find the corresponding calculated item using ID suffix\n    const calculatedItem = calculatedOrder.lineItems.edges.find(cItem =>\n      cItem.node.id.endsWith(lineItemIdSuffix)\n    );\n\n    groupedItems.push({\n      lineItemId: lineItem.id,\n      variantId: lineItem.variant.id,\n      title: lineItem.title,\n      quantity: lineItem.quantity,\n      fulfillableQuantity: lineItem.fulfillableQuantity,\n      calculatedItemId: calculatedItem?.node.id || null,\n      calculatedTitle: calculatedItem?.node.title || null,\n      calculatedQuantity: calculatedItem?.node.quantity || null\n    });\n  }\n}\n\n// Final output: one object containing grouped fulfillable items + calculated order reference\nreturn [\n  {\n    json: {\n      items: groupedItems,\n      calculatedOrder: calculatedOrder\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        -608
+      ],
+      "id": "b50f339a-c9df-425c-93e9-1f586ab0094f",
+      "name": "fetching unfulfilled items"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $('fetching unfulfilled items').first().json.items.map(item => {\n  return {\n    json: {\n      ...item,\n      calculatedOrderId: $('fetching unfulfilled items').first().json.calculatedOrder.id\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3712,
+        -608
+      ],
+      "id": "b7c33f78-64dd-409a-b6dc-e11096315e30",
+      "name": "splitting items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "=mutation removeLineItem {\n  orderEditSetQuantity(id: \"{{ $json.calculatedOrderId }}\" lineItemId: \"{{ $json.calculatedItemId }}\", quantity: 0) {\n    calculatedOrder {\n      id\n      lineItems(first: 20) {\n        edges {\n          node {\n            id\n            quantity\n          }\n        }\n      }\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3968,
+        -608
+      ],
+      "id": "c39be03b-da6a-4902-9c68-01c9eedba338",
+      "name": "remove items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "=mutation {\n  orderEditCommit(id: \"{{ $json.data[0].orderEditSetQuantity.calculatedOrder.id }}\") {\n    order {\n      id\n      name\n    }\n    userErrors {\n      field\n      message\n    }\n  }\n}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4496,
+        -608
+      ],
+      "id": "de6a384e-8619-4614-bae0-47a15440cfa7",
+      "name": "Edit order"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/2025-07/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        -608
+      ],
+      "id": "4099f460-6294-4fe4-9462-d58fbedde432",
+      "name": "setting metafields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://your_shop_name.myshopify.com/admin/api/unstable/graphql.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "access-token"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2448,
+        -608
+      ],
+      "id": "c2274f0f-ce18-4808-8b4f-5bffa5ba6689",
+      "name": "filling unfulfilled items"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        -608
+      ],
+      "id": "1e950466-241a-466e-8de1-538bac5f2487",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "# fetching all the partially fullfilled orders\n",
+        "height": 544,
+        "width": 864
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        -912
+      ],
+      "typeVersion": 1,
+      "id": "730ad644-207a-44a8-898d-cb95dd42e440",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# creating draft for taking only unfulfilled items in that\n",
+        "height": 528,
+        "width": 1584
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1488,
+        -912
+      ],
+      "typeVersion": 1,
+      "id": "9de5fa61-9747-4211-a9e7-271a3ea6988e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# removing unfulfilled items from the original orders\n",
+        "height": 512,
+        "width": 1472
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3168,
+        -896
+      ],
+      "typeVersion": 1,
+      "id": "dbfaaf1a-1bbc-4456-afad-f1f7aec97708",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {
+    "Draft": [
+      {
+        "json": {
+          "data": {
+            "draftOrderCreateFromOrder": {
+              "draftOrder": {
+                "id": "gid://shopify/DraftOrder/1235020579112"
+              },
+              "userErrors": []
+            }
+          },
+          "extensions": {
+            "cost": {
+              "requestedQueryCost": 10,
+              "actualQueryCost": 10,
+              "throttleStatus": {
+                "maximumAvailable": 20000,
+                "currentlyAvailable": 19990,
+                "restoreRate": 1000
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "setting metafields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "combining all items to be removed1": {
+      "main": [
+        [
+          {
+            "node": "Edit order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Partially Fulfilled Orders": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "metafeilds query": {
+      "main": [
+        [
+          {
+            "node": "filling unfulfilled items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "making query for order complete": {
+      "main": [
+        [
+          {
+            "node": "Order complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order complete": {
+      "main": [
+        [
+          {
+            "node": "Begin Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Begin Edit": {
+      "main": [
+        [
+          {
+            "node": "fetching unfulfilled items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetching unfulfilled items": {
+      "main": [
+        [
+          {
+            "node": "splitting items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "splitting items": {
+      "main": [
+        [
+          {
+            "node": "remove items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remove items": {
+      "main": [
+        [
+          {
+            "node": "combining all items to be removed1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit order": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "setting metafields": {
+      "main": [
+        [
+          {
+            "node": "metafeilds query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filling unfulfilled items": {
+      "main": [
+        [
+          {
+            "node": "making query for order complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Partially Fulfilled Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0a8e36c8-1c7d-4854-a6c8-bc4187851632",
+  "meta": {
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "DIGkspcVywSzRElF",
+  "tags": []
+}
