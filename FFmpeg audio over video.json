@@ -1,0 +1,474 @@
+{
+  "name": "FFmpeg audio over video",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1vo97hbOgStj2X9POQ-4YOJXzy3BAL0kO",
+          "mode": "list",
+          "cachedResultName": "COWS_AT_THE_GRASS.mp4",
+          "cachedResultUrl": "https://drive.google.com/file/d/1vo97hbOgStj2X9POQ-4YOJXzy3BAL0kO/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1440,
+        -416
+      ],
+      "id": "98ed55cd-eda1-4087-a65c-3f922e41ca73",
+      "name": "Download video",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vntqRvoMkl2ceU96",
+          "name": "ali account1 "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/shared/ali/{{ $('directory id').item.json.directory }}/audio{{ $json.fileName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -80
+      ],
+      "id": "5df7c3ee-8fc4-4856-ad6d-0e707a7e01d1",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -416,
+        -240
+      ],
+      "id": "7a55c650-b5c9-4320-921b-c0fe049284a8",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {json:{video: 1}}\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -240
+      ],
+      "id": "23216544-7340-43ec-b719-1fb65c46211e",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -i /data/shared/ali/{{ $item(\"0\").$node[\"directory id\"].json[\"directory\"] }}/video{{ $('getting name of video file').first().json.fileName }} \\\n-i /data/shared/ali/{{ $item(\"0\").$node[\"directory id\"].json[\"directory\"] }}/audio{{ $('getting name of audio file').first().json.fileName }} \\\n-map 0:v:0 -map 1:a:0 \\\n-c:v libx264 -c:a aac -shortest \\\n/data/shared/ali/{{ $item(\"0\").$node[\"directory id\"].json[\"directory\"] }}/output_merged.mp4\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -240
+      ],
+      "id": "7b2a1d5b-03a3-4601-92e9-d0bf5ab3d4a4",
+      "name": "Execute Command1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const guid = $('directory id').first().json.directory;\nconst content = [\n  `file '/data/shared/ali/${guid}/output_merged.mp4'`,\n].join('\\n');\n\n// Output must include a valid binary \"data\" property\n\nreturn {\n  content \n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -240
+      ],
+      "id": "7c7abbf5-2fe9-4586-b3bf-dc9647ef11f2",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "content",
+        "options": {
+          "fileName": "video.txt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        -240
+      ],
+      "id": "190bfaf2-3cc8-442e-83f7-a989e3e87656",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/shared/ali/{{ $('directory id').first().json.directory }}/video.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -240
+      ],
+      "id": "e59bc932-b48a-4ec8-b0bf-526d1b65f7c7",
+      "name": "Read/Write Files from Disk2"
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -f concat -safe 0 -i /data/shared/ali/{{ $('directory id').first().json.directory }}/video.txt -c copy /data/shared/ali/{{ $('directory id').first().json.directory }}/final_output.mp4\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -240
+      ],
+      "id": "e49662de-4f0e-46b6-be35-5b9e616231fc",
+      "name": "Execute Command2"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/data/shared/ali/{{ $('directory id').first().json.directory }}/final_output.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -240
+      ],
+      "id": "c0ef4e36-eb2a-48d2-8835-0b8c797cf755",
+      "name": "Read/Write Files from Disk3"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1fzCyxbBxCu9u6LD2eDlPNs4rZyAF4gXe",
+          "mode": "list",
+          "cachedResultName": "future-design-344320.mp3",
+          "cachedResultUrl": "https://drive.google.com/file/d/1fzCyxbBxCu9u6LD2eDlPNs4rZyAF4gXe/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1440,
+        -80
+      ],
+      "id": "93641693-aa8d-4036-b762-79e9a1caa3c8",
+      "name": "Download audio",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vntqRvoMkl2ceU96",
+          "name": "ali account1 "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/data/shared/ali/{{ $('directory id').item.json.directory }}/video{{ $json.fileName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -416
+      ],
+      "id": "2dfbc4e8-7de7-42d2-83fb-a89f0b4f507e",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fileInfo = $input.first().binary.data;\n\nif (!fileInfo || !fileInfo.fileName) {\n  throw new Error(\"Binary file is missing or does not have a fileName.\");\n}\n\nreturn {\n  json: {\n    fileName: fileInfo.fileName,\n  },\n  binary: {\n    data: fileInfo\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        -416
+      ],
+      "id": "a7828151-4a8b-47ba-ba32-c4d583215572",
+      "name": "getting name of video file"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fileInfo = $input.first().binary.data;\n\nif (!fileInfo || !fileInfo.fileName) {\n  throw new Error(\"Binary file is missing or does not have a fileName.\");\n}\n\nreturn {\n  json: {\n    fileName: fileInfo.fileName,\n  },\n  binary: {\n    data: fileInfo\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1152,
+        -80
+      ],
+      "id": "81af89a4-6f0a-485b-9ee8-c9a9303e8f4b",
+      "name": "getting name of audio file"
+    },
+    {
+      "parameters": {
+        "command": "=mkdir -p /data/shared/ali/{{ $json.directory }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        -240
+      ],
+      "id": "86965cfd-bb54-49e5-a073-e63e3125bbdc",
+      "name": "generating directory"
+    },
+    {
+      "parameters": {
+        "jsCode": "function generateGuid() {\n    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n        var r = Math.random() * 16 | 0,\n            v = c == 'x' ? r : (r & 0x3 | 0x8);\n        return v.toString(16);\n    });\n}\n\nconst directory = generateGuid();\n\nreturn {\n    json: {\n        directory\n    }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        -240
+      ],
+      "id": "0bdcdd2e-7889-4473-be23-bf41b48e86b9",
+      "name": "directory id"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2176,
+        -240
+      ],
+      "id": "8bc11849-c8f5-4549-9214-0bf39b3fef2a",
+      "name": "trigger"
+    },
+    {
+      "parameters": {
+        "command": "=rm -rf /data/shared/ali/*"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -2144,
+        224
+      ],
+      "id": "d1d18226-61d3-406b-8d9f-c4befd050fa4",
+      "name": "clear the directory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Download video": {
+      "main": [
+        [
+          {
+            "node": "getting name of video file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Execute Command1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk2": {
+      "main": [
+        [
+          {
+            "node": "Execute Command2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command2": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download audio": {
+      "main": [
+        [
+          {
+            "node": "getting name of audio file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk3": {
+      "main": [
+        []
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getting name of video file": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getting name of audio file": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generating directory": {
+      "main": [
+        [
+          {
+            "node": "Download video",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "directory id": {
+      "main": [
+        [
+          {
+            "node": "generating directory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "directory id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9fe0b6e2-2075-442f-9c54-20d20ca13a57",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "hQGyKwE2IWbrYlz3",
+  "tags": []
+}
