@@ -1,0 +1,106 @@
+{
+  "name": "vapi outbound call",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-call",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "3dce64d2-82c3-40c2-b80c-c42ffd9bd7ec",
+      "name": "Webhook",
+      "webhookId": "0caae136-6a1b-4c18-b05a-2921163a9845"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vapi.ai/call",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 235df0d9-d6a1-406f-80d7-7e3dda417e16"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assistantId\": \"f10d7b0a-bd40-4ce2-a1fb-ae5c95de7295\",\n  \"customer\": {\n    \"number\": \"{{ $json.body.phone }}\",\n    \"numberE164CheckEnabled\": false\n  },\n  \"phoneNumberId\": \"ec1d137d-f563-4fe7-8b86-fafcf82bd50d\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -160
+      ],
+      "id": "2b9b04d6-12b0-4442-bca5-a8419452fdde",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"message\": \"Call started\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        848,
+        -160
+      ],
+      "id": "b1f1fbf0-286c-4df5-89fc-11140cbd56ff",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3c4a574a-8403-4129-878f-e19cccdda1ad",
+  "meta": {
+    "instanceId": "44ab86ced0d239c1654b0cb0f02eeb607ed4a6a9ae622a2a69658ee4d471167b"
+  },
+  "id": "3GkGwrD7F303YNIH",
+  "tags": [
+    {
+      "createdAt": "2025-08-12T05:48:42.159Z",
+      "updatedAt": "2025-08-12T05:48:42.159Z",
+      "id": "ZIEAFZTCc56U0Gmk",
+      "name": "outbound call"
+    }
+  ]
+}
